@@ -22,19 +22,27 @@ const server = express();
 // database connection
 connectToDB();
 
-// ✅ Correct CORS setup
+// ✅ Allowed origins
 const allowedOrigins = [
   process.env.ORIGIN || "https://hot-wheels-shop-i5aj.vercel.app",
   "http://localhost:3000",
   "https://hot-wheels-shop.vercel.app",
 ];
 
+// ✅ Debug log to confirm environment variables
+console.log("✅ Allowed Origins:", allowedOrigins);
+console.log("✅ Current NODE_ENV:", process.env.NODE_ENV);
+console.log("✅ Current ORIGIN ENV:", process.env.ORIGIN);
+
+// ✅ CORS middleware with debug logging
 server.use(
   cors({
     origin: function (origin, callback) {
+      console.log("🌐 Incoming request from origin:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn("🚫 Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -47,7 +55,13 @@ server.use(
 server.use(express.json({ limit: "50mb" }));
 server.use(express.urlencoded({ limit: "50mb", extended: true }));
 server.use(cookieParser());
-server.use(morgan("tiny"));
+server.use(morgan("dev")); // logs HTTP requests with status
+
+// ✅ Debug middleware: log all requests
+server.use((req, res, next) => {
+  console.log(`➡️ [${req.method}] ${req.originalUrl}`);
+  next();
+});
 
 // routeMiddleware
 server.use("/auth", authRoutes);
@@ -63,10 +77,18 @@ server.use("/wishlist", wishlistRoutes);
 
 // root route
 server.get("/", (req, res) => {
+  console.log("✅ Root route hit");
   res.status(200).json({ message: "running" });
 });
 
+// ✅ Global error handler to catch async or CORS issues
+server.use((err, req, res, next) => {
+  console.error("❌ Global Error:", err.message);
+  res.status(500).json({ error: err.message || "Internal Server Error" });
+});
+
 // server start
-server.listen(8000, () => {
-  console.log("server [STARTED] ~ http://localhost:8000");
+const PORT = process.env.PORT || 8000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server [STARTED] on http://localhost:${PORT}`);
 });
